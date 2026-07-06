@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>Sub2API Usage</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --surface-2: #eef3f8;
+        --ink: #152033;
+        --muted: #65738a;
+        --line: #dce4ee;
+        --blue: #2366d1;
+        --cyan: #0891b2;
+        --green: #138a5b;
+        --amber: #b76b00;
+        --red: #c2413d;
+        --violet: #6d57c8;
+        --shadow: 0 18px 45px rgba(24, 38, 61, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 251, 0.86) 42%, #f5f7fb 100%),
+          radial-gradient(circle at 14% 0%, rgba(35, 102, 209, 0.1), transparent 34%),
+          radial-gradient(circle at 85% 8%, rgba(19, 138, 91, 0.09), transparent 30%);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #b9c7d8;
+        background: #f8fafc;
+      }
+
+      .page {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 28px 28px 48px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 6px;
+      }
+
+      .eyebrow {
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 760;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: #111827;
+        font-size: clamp(28px, 4vw, 46px);
+        line-height: 1.06;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .timebox {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(19, 138, 91, 0.13);
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin: 20px 0;
+      }
+
+      .kpi,
+      .panel,
+      .account-card {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(220, 228, 238, 0.96);
+        box-shadow: var(--shadow);
+      }
+
+      .kpi {
+        min-height: 118px;
+        border-radius: 8px;
+        padding: 14px;
+        display: grid;
+        align-content: space-between;
+        gap: 12px;
+      }
+
+      .kpi .label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .kpi .value {
+        font-size: clamp(22px, 2.4vw, 32px);
+        line-height: 1.05;
+        font-weight: 780;
+        color: #101827;
+      }
+
+      .kpi .note {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .kpi.accent-blue {
+        border-top: 3px solid var(--blue);
+      }
+
+      .kpi.accent-green {
+        border-top: 3px solid var(--green);
+      }
+
+      .kpi.accent-amber {
+        border-top: 3px solid var(--amber);
+      }
+
+      .kpi.accent-red {
+        border-top: 3px solid var(--red);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .panel {
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .panel + .panel {
+        margin-top: 14px;
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h2 {
+        margin: 0;
+        color: #111827;
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .panel-title .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .chart-wrap {
+        width: 100%;
+        overflow: hidden;
+      }
+
+      svg.chart {
+        display: block;
+        width: 100%;
+        min-height: 250px;
+      }
+
+      .chart-grid {
+        stroke: #e8eef6;
+        stroke-width: 1;
+      }
+
+      .chart-axis {
+        fill: var(--muted);
+        font-size: 11px;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend i {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        display: inline-block;
+      }
+
+      .mini-bars {
+        display: grid;
+        grid-template-columns: repeat(48, minmax(3px, 1fr));
+        align-items: end;
+        gap: 3px;
+        min-height: 92px;
+        padding: 10px 4px 0;
+      }
+
+      .mini-bars div {
+        min-height: 2px;
+        border-radius: 3px 3px 0 0;
+        background: linear-gradient(180deg, #2366d1, #0891b2);
+      }
+
+      .account-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .account-card {
+        border-radius: 8px;
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .account-head,
+      .row-between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .account-name {
+        min-width: 0;
+      }
+
+      .account-name strong {
+        display: block;
+        overflow: hidden;
+        color: #111827;
+        font-size: 15px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .account-name small {
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 12px;
+        font-weight: 680;
+        white-space: nowrap;
+      }
+
+      .badge.ok {
+        color: #0b6f49;
+        background: rgba(19, 138, 91, 0.12);
+        border-color: rgba(19, 138, 91, 0.22);
+      }
+
+      .badge.warn {
+        color: #8a4a00;
+        background: rgba(183, 107, 0, 0.13);
+        border-color: rgba(183, 107, 0, 0.24);
+      }
+
+      .badge.bad {
+        color: #a12622;
+        background: rgba(194, 65, 61, 0.12);
+        border-color: rgba(194, 65, 61, 0.22);
+      }
+
+      .badge.neutral {
+        color: #536075;
+        background: #eef3f8;
+        border-color: #dde7f1;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        min-width: 0;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .metric strong {
+        display: block;
+        overflow: hidden;
+        color: #111827;
+        font-size: 15px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .bar-track {
+        height: 8px;
+        border-radius: 999px;
+        background: #edf2f7;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--cyan), var(--blue));
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #536075;
+        font-size: 12px;
+      }
+
+      .window-panel {
+        display: grid;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid #dce7f3;
+        border-radius: 8px;
+        background: linear-gradient(180deg, #f8fbff, #ffffff);
+      }
+
+      .window-panel.empty {
+        min-height: auto;
+        place-items: stretch;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .window-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .window-header strong {
+        color: #111827;
+        font-size: 13px;
+      }
+
+      .window-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .window-card {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid #e5edf6;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .window-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .window-label {
+        min-width: 0;
+      }
+
+      .window-label strong {
+        display: block;
+        color: #111827;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+
+      .window-label span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      .window-pct {
+        color: #111827;
+        font-size: 20px;
+        font-weight: 780;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .window-track {
+        height: 9px;
+        border-radius: 999px;
+        background: #edf2f7;
+        overflow: hidden;
+      }
+
+      .window-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--green), var(--cyan));
+      }
+
+      .window-fill.warn {
+        background: linear-gradient(90deg, var(--amber), #e49a2f);
+      }
+
+      .window-fill.bad {
+        background: linear-gradient(90deg, var(--red), #e76561);
+      }
+
+      .window-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .window-meta span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .alert {
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(194, 65, 61, 0.08);
+        color: #8f2926;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .models {
+        display: grid;
+        gap: 8px;
+      }
+
+      .model-line {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .model-line b {
+        overflow: hidden;
+        color: #1f2937;
+        font-weight: 640;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .model-bar {
+        height: 7px;
+        border-radius: 999px;
+        background: #edf2f7;
+        overflow: hidden;
+        grid-column: 1 / -1;
+      }
+
+      .model-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--green), var(--cyan));
+      }
+
+      .users-panel {
+        margin-top: 14px;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 160px 180px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .field {
+        position: relative;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        padding: 0 12px;
+        outline: none;
+      }
+
+      .field input:focus,
+      .field select:focus {
+        border-color: rgba(35, 102, 209, 0.72);
+        box-shadow: 0 0 0 3px rgba(35, 102, 209, 0.12);
+      }
+
+      .table-wrap {
+        margin-top: 14px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #edf2f7;
+        text-align: left;
+        vertical-align: middle;
+        font-size: 13px;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fafc;
+        color: #536075;
+        font-size: 12px;
+        font-weight: 720;
+      }
+
+      tbody tr:hover {
+        background: #fafcff;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .user-cell {
+        display: grid;
+        gap: 4px;
+        min-width: 190px;
+      }
+
+      .user-cell strong {
+        color: #111827;
+        font-size: 13px;
+      }
+
+      .user-cell span,
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .number {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .share-cell {
+        display: grid;
+        gap: 6px;
+        min-width: 120px;
+      }
+
+      .empty,
+      .loading {
+        min-height: 280px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 1180px) {
+        .kpis {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          padding: 20px 14px 34px;
+        }
+
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .toolbar {
+          justify-content: flex-start;
+        }
+
+        .kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-row {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .window-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .kpis {
+          grid-template-columns: 1fr;
+        }
+
+        .panel,
+        .account-card,
+        .kpi {
+          box-shadow: none;
+        }
+
+        .metric-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div class="brand">
+          <div class="eyebrow">Sub2API</div>
+          <h1>用量状态看板</h1>
+          <p class="subtitle" id="subtitle">读取实时聚合数据中</p>
+        </div>
+        <div class="toolbar">
+          <div class="timebox"><span class="dot" id="statusDot"></span><span id="updatedAt">等待数据</span></div>
+          <button id="refreshBtn" type="button">刷新</button>
+        </div>
+      </header>
+
+      <section id="kpis" class="kpis"></section>
+
+      <section class="grid">
+        <div>
+          <section class="panel">
+            <div class="panel-title">
+              <h2>30 天趋势</h2>
+              <span class="meta" id="trendMeta"></span>
+            </div>
+            <div class="chart-wrap" id="dailyChart"></div>
+            <div class="legend">
+              <span><i style="background:#2366d1"></i>请求数</span>
+              <span><i style="background:#138a5b"></i>用户成本</span>
+              <span><i style="background:#b76b00"></i>活跃用户</span>
+            </div>
+          </section>
+
+          <section class="panel users-panel">
+            <div class="panel-title">
+              <h2>用户用量</h2>
+              <span class="meta" id="userCount"></span>
+            </div>
+            <div class="controls">
+              <label class="field">
+                <input id="searchInput" type="search" placeholder="搜索用户名、邮箱或 ID" />
+              </label>
+              <label class="field">
+                <select id="statusFilter">
+                  <option value="all">全部状态</option>
+                  <option value="active">active</option>
+                  <option value="disabled">disabled</option>
+                </select>
+              </label>
+              <label class="field">
+                <select id="sortSelect">
+                  <option value="cost30">按 30 天成本</option>
+                  <option value="requests30">按 30 天请求</option>
+                  <option value="today">按今日请求</option>
+                  <option value="active">按最近活跃</option>
+                  <option value="balance">按余额</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>用户</th>
+                    <th>状态</th>
+                    <th>今日</th>
+                    <th>7 天</th>
+                    <th>30 天成本</th>
+                    <th>30 天请求</th>
+                    <th>Token</th>
+                    <th>账号/Key</th>
+                    <th>最近活跃</th>
+                  </tr>
+                </thead>
+                <tbody id="usersBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <aside>
+          <section class="panel">
+            <div class="panel-title">
+              <h2>账号窗口</h2>
+              <span class="meta" id="accountMeta"></span>
+            </div>
+            <div id="accounts" class="account-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>48 小时请求</h2>
+              <span class="meta" id="hourlyMeta"></span>
+            </div>
+            <div class="mini-bars" id="hourlyBars"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>热门模型</h2>
+              <span class="meta">近 30 天</span>
+            </div>
+            <div id="models" class="models"></div>
+          </section>
+        </aside>
+      </section>
+
+      <div class="footer">
+        <span id="sourceInfo"></span>
+        <span>页面只读取展示字段，不暴露账号 credentials 或 API key。</span>
+      </div>
+    </main>
+
+    <script>
+      const state = {
+        data: null,
+        loading: false,
+        search: "",
+        status: "all",
+        sort: "cost30",
+        timer: null,
+      };
+
+      const els = {
+        subtitle: document.getElementById("subtitle"),
+        updatedAt: document.getElementById("updatedAt"),
+        statusDot: document.getElementById("statusDot"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        kpis: document.getElementById("kpis"),
+        dailyChart: document.getElementById("dailyChart"),
+        trendMeta: document.getElementById("trendMeta"),
+        accounts: document.getElementById("accounts"),
+        accountMeta: document.getElementById("accountMeta"),
+        hourlyBars: document.getElementById("hourlyBars"),
+        hourlyMeta: document.getElementById("hourlyMeta"),
+        models: document.getElementById("models"),
+        usersBody: document.getElementById("usersBody"),
+        userCount: document.getElementById("userCount"),
+        searchInput: document.getElementById("searchInput"),
+        statusFilter: document.getElementById("statusFilter"),
+        sortSelect: document.getElementById("sortSelect"),
+        sourceInfo: document.getElementById("sourceInfo"),
+      };
+
+      const nf = new Intl.NumberFormat("zh-CN");
+      const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 1 });
+      const moneyFmt = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4,
+      });
+
+      function esc(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function num(value) {
+        return Number(value || 0);
+      }
+
+      function fmtNumber(value) {
+        const n = num(value);
+        return Math.abs(n) >= 100000 ? compact.format(n) : nf.format(Math.round(n));
+      }
+
+      function fmtMoney(value) {
+        const n = num(value);
+        if (n > 0 && n < 0.0001) return "$<0.0001";
+        return moneyFmt.format(n);
+      }
+
+      function fmtTokens(value) {
+        const n = num(value);
+        if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1)}M`;
+        if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`;
+        return nf.format(Math.round(n));
+      }
+
+      function fmtDurationSeconds(value) {
+        const seconds = Math.max(0, Math.round(num(value)));
+        if (!seconds) return "现在";
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        if (days >= 1) return `${days} 天 ${hours} 小时`;
+        if (hours >= 1) return `${hours} 小时 ${minutes} 分`;
+        return `${Math.max(1, minutes)} 分钟`;
+      }
+
+      function fmtWindowMinutes(value) {
+        const minutes = num(value);
+        if (!minutes) return "未启用";
+        if (minutes % 1440 === 0) return `${minutes / 1440} 天窗口`;
+        if (minutes % 60 === 0) return `${minutes / 60} 小时窗口`;
+        return `${minutes} 分钟窗口`;
+      }
+
+      function pctClass(value) {
+        const pct = num(value);
+        if (pct >= 80) return "bad";
+        if (pct >= 55) return "warn";
+        return "";
+      }
+
+      function pctLabel(value) {
+        if (value === null || value === undefined || value === "") return "未知";
+        return `${Math.round(num(value))}%`;
+      }
+
+      function dateTime(value) {
+        if (!value) return "从未";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "未知";
+        return d.toLocaleString("zh-CN", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function relTime(value) {
+        if (!value) return "从未";
+        const d = new Date(value);
+        const diff = Date.now() - d.getTime();
+        if (Number.isNaN(diff)) return "未知";
+        if (diff < 0) return dateTime(value);
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return "刚刚";
+        if (minutes < 60) return `${minutes} 分钟前`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} 小时前`;
+        const days = Math.floor(hours / 24);
+        if (days < 30) return `${days} 天前`;
+        return dateTime(value);
+      }
+
+      function statusBadge(status, schedulable = true) {
+        if (status === "active" && schedulable) return `<span class="badge ok">active</span>`;
+        if (status === "active") return `<span class="badge warn">paused</span>`;
+        if (status === "disabled") return `<span class="badge neutral">disabled</span>`;
+        return `<span class="badge bad">${esc(status || "error")}</span>`;
+      }
+
+      function metric(row, windowName) {
+        return row?.metrics?.[windowName] || {};
+      }
+
+      function userName(user) {
+        return user.username || (user.email ? user.email.split("@")[0] : `user-${user.id}`);
+      }
+
+      async function loadData(manual = false) {
+        if (state.loading) return;
+        state.loading = true;
+        if (manual) els.refreshBtn.textContent = "刷新中";
+        try {
+          const res = await fetch(`data.json?ts=${Date.now()}`, { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          state.data = await res.json();
+          els.statusDot.style.background = "var(--green)";
+          render();
+        } catch (error) {
+          els.statusDot.style.background = "var(--red)";
+          els.updatedAt.textContent = `加载失败：${error.message}`;
+          if (!state.data) {
+            els.kpis.innerHTML = "";
+            els.dailyChart.innerHTML = `<div class="empty">没有可用数据</div>`;
+          }
+        } finally {
+          state.loading = false;
+          els.refreshBtn.textContent = "刷新";
+        }
+      }
+
+      function render() {
+        const data = state.data;
+        if (!data) return;
+        const today = data.totals?.today || {};
+        const week = data.totals?.last_7d || {};
+        const month = data.totals?.last_30d || {};
+        const generatedAt = dateTime(data.generated_at);
+
+        els.subtitle.textContent = `${fmtNumber(data.totals?.users)} 个用户，${fmtNumber(data.totals?.accounts)} 个账号，数据时区 ${data.server_timezone || "server"}`;
+        els.updatedAt.textContent = `更新于 ${generatedAt}`;
+        els.trendMeta.textContent = `${data.daily?.length || 0} 天`;
+        els.accountMeta.textContent = `${fmtNumber(data.totals?.schedulable_accounts)} / ${fmtNumber(data.totals?.accounts)} 可调度`;
+        els.hourlyMeta.textContent = `峰值 ${fmtNumber(Math.max(...(data.hourly || []).map((x) => num(x.requests)), 0))}`;
+        els.sourceInfo.textContent = `日志范围 ${dateTime(data.source?.logs_min_at)} 到 ${dateTime(data.source?.logs_max_at)}，共 ${fmtNumber(data.source?.usage_log_count)} 条`;
+
+        renderKpis(today, week, month, data);
+        renderDailyChart(data.daily || []);
+        renderAccounts(data.accounts || []);
+        renderHourlyBars(data.hourly || []);
+        renderModels(data.top_models_30d || []);
+        renderUsers();
+      }
+
+      function renderKpis(today, week, month, data) {
+        const accountNote = `${fmtNumber(data.totals?.active_accounts)} active，${fmtNumber(data.totals?.error_accounts)} 异常`;
+        const avgLatency = month.avg_duration_ms ? `${fmtNumber(month.avg_duration_ms)} ms 平均` : "暂无延迟";
+        const p95 = month.p95_duration_ms ? `${fmtNumber(month.p95_duration_ms)} ms P95` : "";
+        els.kpis.innerHTML = [
+          kpi("今日请求", fmtNumber(today.requests), `${fmtNumber(today.active_users)} 活跃用户`, "accent-blue"),
+          kpi("今日成本", fmtMoney(today.total_cost), `${fmtMoney(today.account_cost)} 账号成本`, "accent-green"),
+          kpi("7 天请求", fmtNumber(week.requests), `${fmtTokens(week.total_tokens)} tokens`, "accent-blue"),
+          kpi("30 天成本", fmtMoney(month.total_cost), `${fmtNumber(month.requests)} 请求`, "accent-green"),
+          kpi("账号健康", `${fmtNumber(data.totals?.schedulable_accounts)}/${fmtNumber(data.totals?.accounts)}`, accountNote, "accent-amber"),
+          kpi("响应耗时", avgLatency, p95 || "近 30 天", "accent-red"),
+        ].join("");
+      }
+
+      function kpi(label, value, note, klass) {
+        return `<article class="kpi ${klass}">
+          <div class="label">${esc(label)}</div>
+          <div class="value">${esc(value)}</div>
+          <div class="note">${esc(note)}</div>
+        </article>`;
+      }
+
+      function renderDailyChart(rows) {
+        if (!rows.length) {
+          els.dailyChart.innerHTML = `<div class="empty">暂无趋势数据</div>`;
+          return;
+        }
+
+        const width = 920;
+        const height = 270;
+        const pad = { top: 20, right: 30, bottom: 34, left: 48 };
+        const innerW = width - pad.left - pad.right;
+        const innerH = height - pad.top - pad.bottom;
+        const maxReq = Math.max(...rows.map((r) => num(r.requests)), 1);
+        const maxCost = Math.max(...rows.map((r) => num(r.total_cost)), 1);
+        const maxUsers = Math.max(...rows.map((r) => num(r.active_users)), 1);
+        const barW = Math.max(4, innerW / rows.length - 4);
+
+        const x = (i) => pad.left + (rows.length === 1 ? innerW / 2 : (i / (rows.length - 1)) * innerW);
+        const yCost = (v) => pad.top + innerH - (num(v) / maxCost) * innerH;
+        const yUsers = (v) => pad.top + innerH - (num(v) / maxUsers) * innerH;
+        const costPoints = rows.map((r, i) => `${x(i).toFixed(2)},${yCost(r.total_cost).toFixed(2)}`).join(" ");
+        const userPoints = rows.map((r, i) => `${x(i).toFixed(2)},${yUsers(r.active_users).toFixed(2)}`).join(" ");
+
+        const bars = rows
+          .map((r, i) => {
+            const h = (num(r.requests) / maxReq) * innerH;
+            const bx = x(i) - barW / 2;
+            const by = pad.top + innerH - h;
+            const title = `${r.date}\n请求 ${fmtNumber(r.requests)}\n成本 ${fmtMoney(r.total_cost)}\n活跃用户 ${fmtNumber(r.active_users)}`;
+            return `<rect x="${bx.toFixed(2)}" y="${by.toFixed(2)}" width="${barW.toFixed(2)}" height="${Math.max(h, 1).toFixed(2)}" rx="3" fill="rgba(35,102,209,0.28)"><title>${esc(title)}</title></rect>`;
+          })
+          .join("");
+
+        const labels = rows
+          .filter((_, i) => i === 0 || i === rows.length - 1 || (i % 7 === 0 && i < rows.length - 3))
+          .map((r, i, arr) => {
+            const idx = rows.indexOf(r);
+            const anchor = i === arr.length - 1 ? "end" : i === 0 ? "start" : "middle";
+            return `<text class="chart-axis" x="${x(idx).toFixed(2)}" y="${height - 9}" text-anchor="${anchor}">${esc(r.date.slice(5))}</text>`;
+          })
+          .join("");
+
+        els.dailyChart.innerHTML = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="30 天用量趋势">
+          <line class="chart-grid" x1="${pad.left}" y1="${pad.top}" x2="${pad.left + innerW}" y2="${pad.top}"></line>
+          <line class="chart-grid" x1="${pad.left}" y1="${pad.top + innerH / 2}" x2="${pad.left + innerW}" y2="${pad.top + innerH / 2}"></line>
+          <line class="chart-grid" x1="${pad.left}" y1="${pad.top + innerH}" x2="${pad.left + innerW}" y2="${pad.top + innerH}"></line>
+          <text class="chart-axis" x="8" y="${pad.top + 4}">${esc(fmtNumber(maxReq))}</text>
+          <text class="chart-axis" x="8" y="${pad.top + innerH + 4}">0</text>
+          ${bars}
+          <polyline points="${costPoints}" fill="none" stroke="#138a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="${userPoints}" fill="none" stroke="#b76b00" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          ${labels}
+        </svg>`;
+      }
+
+      function renderAccounts(accounts) {
+        if (!accounts.length) {
+          els.accounts.innerHTML = `<div class="empty">暂无账号</div>`;
+          return;
+        }
+        const maxCost = Math.max(...accounts.map((a) => num(metric(a, "last_30d").total_cost)), 1);
+        els.accounts.innerHTML = accounts
+          .map((account) => {
+            const today = metric(account, "today");
+            const week = metric(account, "last_7d");
+            const month = metric(account, "last_30d");
+            const pct = Math.min(100, (num(month.total_cost) / maxCost) * 100);
+            const models = account.top_models_7d || [];
+            const maxModel = Math.max(...models.map((m) => num(m.requests)), 1);
+            const chips = [
+              account.rate_limit_reset_at ? `限速恢复 ${dateTime(account.rate_limit_reset_at)}` : "",
+              account.temp_unschedulable_until ? `临时暂停到 ${dateTime(account.temp_unschedulable_until)}` : "",
+              account.overload_until ? `过载到 ${dateTime(account.overload_until)}` : "",
+              account.expires_at ? `到期 ${dateTime(account.expires_at)}` : "",
+              account.session_window_status ? `窗口 ${account.session_window_status}` : "",
+            ].filter(Boolean);
+            return `<article class="account-card">
+              <div class="account-head">
+                <div class="account-name">
+                  <strong>${esc(account.name)}</strong>
+                  <small>${esc(account.platform)} / ${esc(account.type)} · ${esc(account.quota_dimension || "quota")}</small>
+                </div>
+                ${statusBadge(account.status, account.schedulable)}
+              </div>
+              ${renderAccountWindow(account)}
+              <div class="metric-row">
+                <div class="metric"><span>今日请求</span><strong>${fmtNumber(today.requests)}</strong></div>
+                <div class="metric"><span>7 天成本</span><strong>${fmtMoney(week.total_cost)}</strong></div>
+                <div class="metric"><span>30 天请求</span><strong>${fmtNumber(month.requests)}</strong></div>
+              </div>
+              <div class="bar-track" title="30 天成本占比"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+              <div class="row-between">
+                <span class="muted">最近使用 ${esc(relTime(account.last_used_at || account.last_request_at))}</span>
+                <span class="muted">${fmtTokens(month.total_tokens)} tokens</span>
+              </div>
+              ${account.error_message ? `<div class="alert">${esc(account.error_message)}</div>` : ""}
+              ${chips.length ? `<div class="chips">${chips.map((chip) => `<span class="chip">${esc(chip)}</span>`).join("")}</div>` : ""}
+              ${models.length ? `<div class="models">${models.map((m) => modelLine(m.model, m.requests, maxModel)).join("")}</div>` : ""}
+            </article>`;
+          })
+          .join("");
+      }
+
+      function renderAccountWindow(account) {
+        const usage = account.codex_usage || {};
+        const windows = [
+          {
+            key: "5h",
+            title: "5h 窗口",
+            data: usage.window_5h || {},
+          },
+          {
+            key: "7d",
+            title: "7d 窗口",
+            data: usage.window_7d || {},
+          },
+        ];
+        const hasAny = windows.some((item) => item.data && (item.data.used_percent !== null || item.data.reset_at || item.data.window_minutes));
+        const sessionBits = [
+          account.session_window_start && account.session_window_end ? `${dateTime(account.session_window_start)} - ${dateTime(account.session_window_end)}` : "",
+          account.temp_unschedulable_reason ? account.temp_unschedulable_reason : "",
+        ].filter(Boolean);
+        if (!hasAny) {
+          const message = sessionBits.length ? sessionBits.join(" · ") : "暂无 Codex 窗口数据";
+          return `<div class="window-panel empty">${esc(message)}</div>`;
+        }
+        const updatedAt = usage.updated_at ? `更新 ${dateTime(usage.updated_at)}` : "未记录更新时间";
+        const primary = usage.primary || {};
+        const secondary = usage.secondary || {};
+        const primaryText = primary.window_minutes
+          ? `Primary ${pctLabel(primary.used_percent)} / ${fmtWindowMinutes(primary.window_minutes)}`
+          : "";
+        const secondaryText = secondary.window_minutes
+          ? `Secondary ${pctLabel(secondary.used_percent)} / ${fmtWindowMinutes(secondary.window_minutes)}`
+          : "";
+        return `<div class="window-panel">
+          <div class="window-header">
+            <strong>窗口信息</strong>
+            <span>${esc(updatedAt)}</span>
+          </div>
+          <div class="window-grid">
+            ${windows.map((item) => renderWindowCard(item.title, item.data)).join("")}
+          </div>
+          ${(primaryText || secondaryText || sessionBits.length) ? `<div class="chips">
+            ${[primaryText, secondaryText, ...sessionBits].filter(Boolean).map((chip) => `<span class="chip">${esc(chip)}</span>`).join("")}
+          </div>` : ""}
+        </div>`;
+      }
+
+      function renderWindowCard(title, data) {
+        const pct = Math.max(0, Math.min(100, num(data.used_percent)));
+        const barClass = pctClass(pct);
+        const resetAt = data.reset_at ? dateTime(data.reset_at) : "未知";
+        const resetIn = data.reset_after_seconds !== null && data.reset_after_seconds !== undefined
+          ? fmtDurationSeconds(data.reset_after_seconds)
+          : "";
+        const resetText = resetIn ? `重置 ${resetIn} 后` : "重置时间未知";
+        return `<div class="window-card">
+          <div class="window-top">
+            <div class="window-label">
+              <strong>${esc(title)}</strong>
+              <span>${esc(fmtWindowMinutes(data.window_minutes))}</span>
+            </div>
+            <div class="window-pct">${esc(pctLabel(data.used_percent))}</div>
+          </div>
+          <div class="window-track" title="${esc(`${title} 已用 ${pctLabel(data.used_percent)}，${resetText}`)}">
+            <div class="window-fill ${barClass}" style="width:${pct.toFixed(1)}%"></div>
+          </div>
+          <div class="window-meta">
+            <span>${esc(resetText)}</span>
+            <span>${esc(resetAt)}</span>
+          </div>
+        </div>`;
+      }
+
+      function renderHourlyBars(rows) {
+        if (!rows.length) {
+          els.hourlyBars.innerHTML = "";
+          return;
+        }
+        const maxReq = Math.max(...rows.map((r) => num(r.requests)), 1);
+        els.hourlyBars.innerHTML = rows
+          .map((r) => {
+            const h = Math.max(2, (num(r.requests) / maxReq) * 92);
+            const title = `${r.label}\n请求 ${fmtNumber(r.requests)}\n用户 ${fmtNumber(r.active_users)}`;
+            return `<div style="height:${h.toFixed(1)}px" title="${esc(title)}"></div>`;
+          })
+          .join("");
+      }
+
+      function renderModels(models) {
+        if (!models.length) {
+          els.models.innerHTML = `<div class="empty" style="min-height:120px">暂无模型数据</div>`;
+          return;
+        }
+        const max = Math.max(...models.map((m) => num(m.requests)), 1);
+        els.models.innerHTML = models.map((model) => modelLine(model.model, model.requests, max, model.total_cost)).join("");
+      }
+
+      function modelLine(name, requests, max, cost) {
+        const pct = Math.min(100, (num(requests) / max) * 100);
+        const suffix = cost !== undefined ? `${fmtNumber(requests)} · ${fmtMoney(cost)}` : fmtNumber(requests);
+        return `<div class="model-line">
+          <b title="${esc(name)}">${esc(name)}</b>
+          <span>${esc(suffix)}</span>
+          <div class="model-bar"><span style="width:${pct.toFixed(1)}%"></span></div>
+        </div>`;
+      }
+
+      function renderUsers() {
+        const users = state.data?.users || [];
+        const q = state.search.trim().toLowerCase();
+        const filtered = users
+          .filter((user) => {
+            if (state.status !== "all" && user.status !== state.status) return false;
+            if (!q) return true;
+            return [user.id, user.username, user.email, user.role, user.status].some((v) => String(v || "").toLowerCase().includes(q));
+          })
+          .sort((a, b) => sortUsers(a, b));
+
+        els.userCount.textContent = `显示 ${filtered.length} / ${users.length}`;
+        if (!filtered.length) {
+          els.usersBody.innerHTML = `<tr><td colspan="9"><div class="empty" style="min-height:160px">没有匹配用户</div></td></tr>`;
+          return;
+        }
+
+        const maxCost = Math.max(...filtered.map((u) => num(metric(u, "last_30d").total_cost)), 1);
+        els.usersBody.innerHTML = filtered
+          .map((user) => {
+            const today = metric(user, "today");
+            const week = metric(user, "last_7d");
+            const month = metric(user, "last_30d");
+            const costPct = Math.min(100, (num(month.total_cost) / maxCost) * 100);
+            const name = userName(user);
+            return `<tr>
+              <td>
+                <div class="user-cell">
+                  <strong>${esc(name)}</strong>
+                  <span>${esc(user.email || `ID ${user.id}`)}</span>
+                </div>
+              </td>
+              <td>${statusBadge(user.status, user.status === "active")}</td>
+              <td class="number">${fmtNumber(today.requests)}<br><span class="muted">${fmtMoney(today.total_cost)}</span></td>
+              <td class="number">${fmtNumber(week.requests)}<br><span class="muted">${fmtMoney(week.total_cost)}</span></td>
+              <td>
+                <div class="share-cell">
+                  <span class="number">${fmtMoney(month.total_cost)}</span>
+                  <div class="bar-track"><div class="bar-fill" style="width:${costPct.toFixed(1)}%"></div></div>
+                </div>
+              </td>
+              <td class="number">${fmtNumber(month.requests)}<br><span class="muted">${fmtNumber(month.avg_duration_ms)} ms</span></td>
+              <td class="number">${fmtTokens(month.total_tokens)}</td>
+              <td class="number">${fmtNumber(month.accounts_used)} / ${fmtNumber(user.active_api_key_count || user.api_key_count)}</td>
+              <td>
+                <span class="number">${esc(relTime(user.last_request_at || user.last_active_at || user.last_key_used_at))}</span><br>
+                <span class="muted">${esc(dateTime(user.last_active_at || user.last_login_at))}</span>
+              </td>
+            </tr>`;
+          })
+          .join("");
+      }
+
+      function sortUsers(a, b) {
+        const am = metric(a, "last_30d");
+        const bm = metric(b, "last_30d");
+        if (state.sort === "requests30") return num(bm.requests) - num(am.requests);
+        if (state.sort === "today") return num(metric(b, "today").requests) - num(metric(a, "today").requests);
+        if (state.sort === "active") {
+          return new Date(b.last_request_at || b.last_active_at || 0) - new Date(a.last_request_at || a.last_active_at || 0);
+        }
+        if (state.sort === "balance") return num(b.balance) - num(a.balance);
+        return num(bm.total_cost) - num(am.total_cost);
+      }
+
+      els.refreshBtn.addEventListener("click", () => loadData(true));
+      els.searchInput.addEventListener("input", (event) => {
+        state.search = event.target.value;
+        renderUsers();
+      });
+      els.statusFilter.addEventListener("change", (event) => {
+        state.status = event.target.value;
+        renderUsers();
+      });
+      els.sortSelect.addEventListener("change", (event) => {
+        state.sort = event.target.value;
+        renderUsers();
+      });
+
+      loadData();
+      state.timer = window.setInterval(() => loadData(false), 60000);
+    </script>
+  </body>
+</html>
