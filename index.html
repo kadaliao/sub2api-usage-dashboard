@@ -448,7 +448,7 @@
 
       .window-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 8px;
       }
 
@@ -736,9 +736,6 @@
           grid-template-columns: 1fr 1fr;
         }
 
-        .window-grid {
-          grid-template-columns: 1fr;
-        }
       }
 
       @media (max-width: 520px) {
@@ -1187,11 +1184,6 @@
       function renderAccountWindow(account) {
         const usage = account.codex_usage || {};
         const windows = [
-          {
-            key: "5h",
-            title: "5h 窗口",
-            data: usage.window_5h || {},
-          },
           {
             key: "7d",
             title: "7d 窗口",
