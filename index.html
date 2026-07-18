@@ -5,22 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <title>Sub2API Usage</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("sub2api-theme");
+          const theme = saved === "dark" || saved === "light"
+            ? saved
+            : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <style>
       :root {
         color-scheme: light;
         --bg: #f5f7fb;
         --surface: #ffffff;
         --surface-2: #eef3f8;
+        --surface-hover: #f8fafc;
+        --panel-bg: rgba(255, 255, 255, 0.92);
+        --time-bg: rgba(255, 255, 255, 0.84);
         --ink: #152033;
+        --ink-strong: #111827;
         --muted: #65738a;
+        --muted-strong: #536075;
         --line: #dce4ee;
+        --line-soft: #e8eef6;
+        --panel-line: rgba(220, 228, 238, 0.96);
         --blue: #2366d1;
         --cyan: #0891b2;
         --green: #138a5b;
         --amber: #b76b00;
         --red: #c2413d;
         --violet: #6d57c8;
+        --body-bg: linear-gradient(180deg, #ffffff 0%, #f7f9fc 38%, #f5f7fb 100%);
+        --chart-grid: #e8eef6;
+        --chart-bar: rgba(35, 102, 209, 0.28);
+        --track: #edf2f7;
+        --chip-bg: #f1f5f9;
+        --window-border: #dce7f3;
+        --window-bg: linear-gradient(180deg, #f8fbff, #ffffff);
+        --window-card-border: #e5edf6;
+        --reset-border: #d8e5df;
+        --reset-bg: #f5fbf8;
+        --reset-label: #426258;
+        --input-bg: #ffffff;
+        --table-head: #f8fafc;
+        --table-hover: #fafcff;
+        --success-text: #0b6f49;
+        --success-bg: rgba(19, 138, 91, 0.12);
+        --success-border: rgba(19, 138, 91, 0.22);
+        --warning-text: #8a4a00;
+        --warning-bg: rgba(183, 107, 0, 0.13);
+        --warning-border: rgba(183, 107, 0, 0.24);
+        --danger-text: #a12622;
+        --danger-bg: rgba(194, 65, 61, 0.12);
+        --danger-border: rgba(194, 65, 61, 0.22);
+        --alert-text: #8f2926;
+        --focus-border: rgba(35, 102, 209, 0.72);
+        --focus-ring: rgba(35, 102, 209, 0.12);
+        --bar-warning-end: #e49a2f;
+        --bar-danger-end: #e76561;
         --shadow: 0 18px 45px rgba(24, 38, 61, 0.08);
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #111315;
+        --surface: #1a1d20;
+        --surface-2: #252a30;
+        --surface-hover: #252a30;
+        --panel-bg: rgba(26, 29, 32, 0.96);
+        --time-bg: rgba(26, 29, 32, 0.92);
+        --ink: #e1e5ea;
+        --ink-strong: #f4f6f8;
+        --muted: #9ba5b1;
+        --muted-strong: #b5bec8;
+        --line: #373d45;
+        --line-soft: #2b3037;
+        --panel-line: rgba(57, 64, 73, 0.92);
+        --blue: #76a9ff;
+        --cyan: #4cc9d8;
+        --green: #52c995;
+        --amber: #e8aa54;
+        --red: #f17a76;
+        --violet: #ac9cf2;
+        --body-bg: linear-gradient(180deg, #151719 0%, #111315 42%, #0f1113 100%);
+        --chart-grid: #2c3239;
+        --chart-bar: rgba(118, 169, 255, 0.28);
+        --track: #2a2f35;
+        --chip-bg: #252a30;
+        --window-border: #35404a;
+        --window-bg: linear-gradient(180deg, #20262b, #1b1f23);
+        --window-card-border: #333a42;
+        --reset-border: #315344;
+        --reset-bg: #172a22;
+        --reset-label: #a6cbb9;
+        --input-bg: #15181b;
+        --table-head: #22262b;
+        --table-hover: #20252a;
+        --success-text: #7de0b1;
+        --success-bg: rgba(82, 201, 149, 0.14);
+        --success-border: rgba(82, 201, 149, 0.3);
+        --warning-text: #f0bd72;
+        --warning-bg: rgba(232, 170, 84, 0.14);
+        --warning-border: rgba(232, 170, 84, 0.32);
+        --danger-text: #ff9a96;
+        --danger-bg: rgba(241, 122, 118, 0.14);
+        --danger-border: rgba(241, 122, 118, 0.3);
+        --alert-text: #ffaaa6;
+        --focus-border: rgba(118, 169, 255, 0.8);
+        --focus-ring: rgba(118, 169, 255, 0.2);
+        --bar-warning-end: #f0bd72;
+        --bar-danger-end: #ff9a96;
+        --shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
       }
 
       * {
@@ -30,10 +130,7 @@
       body {
         margin: 0;
         min-width: 320px;
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 251, 0.86) 42%, #f5f7fb 100%),
-          radial-gradient(circle at 14% 0%, rgba(35, 102, 209, 0.1), transparent 34%),
-          radial-gradient(circle at 85% 8%, rgba(19, 138, 91, 0.09), transparent 30%);
+        background: var(--body-bg);
         color: var(--ink);
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -47,7 +144,8 @@
         font: inherit;
       }
 
-      button {
+      button,
+      .button-link {
         border: 1px solid var(--line);
         background: var(--surface);
         color: var(--ink);
@@ -57,9 +155,17 @@
         cursor: pointer;
       }
 
-      button:hover {
-        border-color: #b9c7d8;
-        background: #f8fafc;
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+      }
+
+      button:hover,
+      .button-link:hover {
+        border-color: var(--muted);
+        background: var(--surface-hover);
       }
 
       .page {
@@ -91,7 +197,7 @@
 
       h1 {
         margin: 0;
-        color: #111827;
+        color: var(--ink-strong);
         font-size: clamp(28px, 4vw, 46px);
         line-height: 1.06;
         letter-spacing: 0;
@@ -111,6 +217,56 @@
         justify-content: flex-end;
       }
 
+      .theme-control {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--time-bg);
+        color: var(--muted-strong);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .theme-switch {
+        width: 38px;
+        min-width: 38px;
+        min-height: 22px;
+        height: 22px;
+        padding: 2px;
+        border-color: var(--line);
+        border-radius: 999px;
+        background: var(--surface-2);
+      }
+
+      .theme-switch:hover {
+        border-color: var(--muted);
+        background: var(--surface-2);
+      }
+
+      .theme-switch[aria-checked="true"] {
+        border-color: var(--blue);
+        background: var(--blue);
+      }
+
+      .theme-knob {
+        display: block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--surface);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+        transform: translateX(0);
+        transition: transform 160ms ease;
+      }
+
+      .theme-switch[aria-checked="true"] .theme-knob {
+        transform: translateX(16px);
+      }
+
       .timebox {
         min-height: 38px;
         display: flex;
@@ -119,7 +275,7 @@
         padding: 0 12px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.84);
+        background: var(--time-bg);
         color: var(--muted);
         font-size: 13px;
       }
@@ -129,7 +285,7 @@
         height: 8px;
         border-radius: 999px;
         background: var(--green);
-        box-shadow: 0 0 0 4px rgba(19, 138, 91, 0.13);
+        box-shadow: 0 0 0 4px var(--success-bg);
       }
 
       .kpis {
@@ -142,8 +298,8 @@
       .kpi,
       .panel,
       .account-card {
-        background: rgba(255, 255, 255, 0.92);
-        border: 1px solid rgba(220, 228, 238, 0.96);
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-line);
         box-shadow: var(--shadow);
       }
 
@@ -165,7 +321,7 @@
         font-size: clamp(22px, 2.4vw, 32px);
         line-height: 1.05;
         font-weight: 780;
-        color: #101827;
+        color: var(--ink-strong);
       }
 
       .kpi .note {
@@ -199,9 +355,17 @@
         align-items: start;
       }
 
+      .grid > * {
+        min-width: 0;
+      }
+
       .panel {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
         border-radius: 8px;
         padding: 16px;
+        overflow: hidden;
       }
 
       .panel + .panel {
@@ -218,7 +382,7 @@
 
       .panel-title h2 {
         margin: 0;
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 16px;
         line-height: 1.2;
       }
@@ -240,7 +404,7 @@
       }
 
       .chart-grid {
-        stroke: #e8eef6;
+        stroke: var(--chart-grid);
         stroke-width: 1;
       }
 
@@ -283,23 +447,35 @@
       .mini-bars div {
         min-height: 2px;
         border-radius: 3px 3px 0 0;
-        background: linear-gradient(180deg, #2366d1, #0891b2);
+        background: linear-gradient(180deg, var(--blue), var(--cyan));
       }
 
       .account-list {
+        width: 100%;
+        min-width: 0;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 10px;
       }
 
       .account-card {
+        width: 100%;
+        min-width: 0;
         border-radius: 8px;
         padding: 14px;
         display: grid;
         gap: 12px;
       }
 
+      .account-card > * {
+        min-width: 0;
+        max-width: 100%;
+      }
+
       .account-head,
       .row-between {
+        width: 100%;
+        min-width: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -308,12 +484,17 @@
 
       .account-name {
         min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .account-head .badge {
+        flex: 0 0 auto;
       }
 
       .account-name strong {
         display: block;
         overflow: hidden;
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 15px;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -337,27 +518,27 @@
       }
 
       .badge.ok {
-        color: #0b6f49;
-        background: rgba(19, 138, 91, 0.12);
-        border-color: rgba(19, 138, 91, 0.22);
+        color: var(--success-text);
+        background: var(--success-bg);
+        border-color: var(--success-border);
       }
 
       .badge.warn {
-        color: #8a4a00;
-        background: rgba(183, 107, 0, 0.13);
-        border-color: rgba(183, 107, 0, 0.24);
+        color: var(--warning-text);
+        background: var(--warning-bg);
+        border-color: var(--warning-border);
       }
 
       .badge.bad {
-        color: #a12622;
-        background: rgba(194, 65, 61, 0.12);
-        border-color: rgba(194, 65, 61, 0.22);
+        color: var(--danger-text);
+        background: var(--danger-bg);
+        border-color: var(--danger-border);
       }
 
       .badge.neutral {
-        color: #536075;
-        background: #eef3f8;
-        border-color: #dde7f1;
+        color: var(--muted-strong);
+        background: var(--surface-2);
+        border-color: var(--line);
       }
 
       .metric-row {
@@ -379,7 +560,7 @@
       .metric strong {
         display: block;
         overflow: hidden;
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 15px;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -388,7 +569,7 @@
       .bar-track {
         height: 8px;
         border-radius: 999px;
-        background: #edf2f7;
+        background: var(--track);
         overflow: hidden;
       }
 
@@ -411,8 +592,8 @@
         gap: 5px;
         padding: 0 8px;
         border-radius: 999px;
-        background: #f1f5f9;
-        color: #536075;
+        background: var(--chip-bg);
+        color: var(--muted-strong);
         font-size: 12px;
       }
 
@@ -420,9 +601,9 @@
         display: grid;
         gap: 8px;
         padding: 10px;
-        border: 1px solid #dce7f3;
+        border: 1px solid var(--window-border);
         border-radius: 8px;
-        background: linear-gradient(180deg, #f8fbff, #ffffff);
+        background: var(--window-bg);
       }
 
       .window-panel.empty {
@@ -442,7 +623,65 @@
       }
 
       .window-header strong {
-        color: #111827;
+        color: var(--ink-strong);
+        font-size: 13px;
+      }
+
+      .reset-credit {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 2px 12px;
+        padding: 8px 10px;
+        border: 1px solid var(--reset-border);
+        border-radius: 8px;
+        background: var(--reset-bg);
+      }
+
+      .reset-credit > span:first-child {
+        color: var(--reset-label);
+        font-size: 11px;
+      }
+
+      .reset-credit strong {
+        grid-row: 1 / span 2;
+        grid-column: 2;
+        color: var(--success-text);
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .reset-credit .reset-expiry {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .reset-credit.is-loading,
+      .reset-credit.is-unknown {
+        border-color: var(--window-border);
+        background: var(--surface-hover);
+      }
+
+      .reset-credit.is-loading strong,
+      .reset-credit.is-unknown strong {
+        color: var(--muted-strong);
+        font-size: 13px;
+      }
+
+      .reset-credit.is-failed {
+        border-color: var(--danger-border);
+        background: var(--danger-bg);
+      }
+
+      .reset-credit.is-failed strong {
+        color: var(--danger-text);
         font-size: 13px;
       }
 
@@ -455,9 +694,9 @@
       .window-card {
         min-width: 0;
         padding: 10px;
-        border: 1px solid #e5edf6;
+        border: 1px solid var(--window-card-border);
         border-radius: 8px;
-        background: #fff;
+        background: var(--surface);
       }
 
       .window-top {
@@ -474,7 +713,7 @@
 
       .window-label strong {
         display: block;
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 13px;
         line-height: 1.2;
       }
@@ -487,7 +726,7 @@
       }
 
       .window-pct {
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 20px;
         font-weight: 780;
         font-variant-numeric: tabular-nums;
@@ -497,7 +736,7 @@
       .window-track {
         height: 9px;
         border-radius: 999px;
-        background: #edf2f7;
+        background: var(--track);
         overflow: hidden;
       }
 
@@ -508,11 +747,11 @@
       }
 
       .window-fill.warn {
-        background: linear-gradient(90deg, var(--amber), #e49a2f);
+        background: linear-gradient(90deg, var(--amber), var(--bar-warning-end));
       }
 
       .window-fill.bad {
-        background: linear-gradient(90deg, var(--red), #e76561);
+        background: linear-gradient(90deg, var(--red), var(--bar-danger-end));
       }
 
       .window-meta {
@@ -535,8 +774,8 @@
       .alert {
         padding: 10px;
         border-radius: 8px;
-        background: rgba(194, 65, 61, 0.08);
-        color: #8f2926;
+        background: var(--danger-bg);
+        color: var(--alert-text);
         font-size: 12px;
         line-height: 1.5;
       }
@@ -557,7 +796,7 @@
 
       .model-line b {
         overflow: hidden;
-        color: #1f2937;
+        color: var(--ink);
         font-weight: 640;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -566,7 +805,7 @@
       .model-bar {
         height: 7px;
         border-radius: 999px;
-        background: #edf2f7;
+        background: var(--track);
         overflow: hidden;
         grid-column: 1 / -1;
       }
@@ -599,7 +838,7 @@
         height: 38px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #fff;
+        background: var(--input-bg);
         color: var(--ink);
         padding: 0 12px;
         outline: none;
@@ -607,8 +846,8 @@
 
       .field input:focus,
       .field select:focus {
-        border-color: rgba(35, 102, 209, 0.72);
-        box-shadow: 0 0 0 3px rgba(35, 102, 209, 0.12);
+        border-color: var(--focus-border);
+        box-shadow: 0 0 0 3px var(--focus-ring);
       }
 
       .table-wrap {
@@ -616,7 +855,7 @@
         overflow: auto;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #fff;
+        background: var(--input-bg);
       }
 
       table {
@@ -629,7 +868,7 @@
       th,
       td {
         padding: 12px 14px;
-        border-bottom: 1px solid #edf2f7;
+        border-bottom: 1px solid var(--line-soft);
         text-align: left;
         vertical-align: middle;
         font-size: 13px;
@@ -639,14 +878,14 @@
         position: sticky;
         top: 0;
         z-index: 1;
-        background: #f8fafc;
-        color: #536075;
+        background: var(--table-head);
+        color: var(--muted-strong);
         font-size: 12px;
         font-weight: 720;
       }
 
       tbody tr:hover {
-        background: #fafcff;
+        background: var(--table-hover);
       }
 
       tbody tr:last-child td {
@@ -660,7 +899,7 @@
       }
 
       .user-cell strong {
-        color: #111827;
+        color: var(--ink-strong);
         font-size: 13px;
       }
 
@@ -765,7 +1004,14 @@
         </div>
         <div class="toolbar">
           <div class="timebox"><span class="dot" id="statusDot"></span><span id="updatedAt">等待数据</span></div>
+          <div class="theme-control">
+            <span id="themeLabel">浅色模式</span>
+            <button id="themeToggle" class="theme-switch" type="button" role="switch" aria-checked="false" title="切换深色模式">
+              <span class="theme-knob" aria-hidden="true"></span>
+            </button>
+          </div>
           <button id="refreshBtn" type="button">刷新</button>
+          <a class="button-link" href="logout">退出登录</a>
         </div>
       </header>
 
@@ -780,9 +1026,9 @@
             </div>
             <div class="chart-wrap" id="dailyChart"></div>
             <div class="legend">
-              <span><i style="background:#2366d1"></i>请求数</span>
-              <span><i style="background:#138a5b"></i>用户成本</span>
-              <span><i style="background:#b76b00"></i>活跃用户</span>
+              <span><i style="background:var(--blue)"></i>请求数</span>
+              <span><i style="background:var(--green)"></i>用户成本</span>
+              <span><i style="background:var(--amber)"></i>活跃用户</span>
             </div>
           </section>
 
@@ -874,12 +1120,18 @@
         status: "all",
         sort: "cost30",
         timer: null,
+        codexResets: {},
+        codexResetErrors: {},
+        codexResetsLoading: false,
+        codexResetMessage: "",
       };
 
       const els = {
         subtitle: document.getElementById("subtitle"),
         updatedAt: document.getElementById("updatedAt"),
         statusDot: document.getElementById("statusDot"),
+        themeLabel: document.getElementById("themeLabel"),
+        themeToggle: document.getElementById("themeToggle"),
         refreshBtn: document.getElementById("refreshBtn"),
         kpis: document.getElementById("kpis"),
         dailyChart: document.getElementById("dailyChart"),
@@ -905,6 +1157,34 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: 4,
       });
+      const themeKey = "sub2api-theme";
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function savedTheme() {
+        try {
+          const value = localStorage.getItem(themeKey);
+          return value === "dark" || value === "light" ? value : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function applyTheme(theme, persist = false) {
+        const normalized = theme === "dark" ? "dark" : "light";
+        document.documentElement.dataset.theme = normalized;
+        const dark = normalized === "dark";
+        els.themeToggle.setAttribute("aria-checked", String(dark));
+        els.themeToggle.setAttribute("aria-label", dark ? "切换浅色模式" : "切换深色模式");
+        els.themeToggle.title = dark ? "切换浅色模式" : "切换深色模式";
+        els.themeLabel.textContent = dark ? "深色模式" : "浅色模式";
+        if (persist) {
+          try {
+            localStorage.setItem(themeKey, normalized);
+          } catch (_) {
+            // Theme switching still works when storage is unavailable.
+          }
+        }
+      }
 
       function esc(value) {
         return String(value ?? "")
@@ -1021,6 +1301,7 @@
           state.data = await res.json();
           els.statusDot.style.background = "var(--green)";
           render();
+          loadCodexResetCredits();
         } catch (error) {
           els.statusDot.style.background = "var(--red)";
           els.updatedAt.textContent = `加载失败：${error.message}`;
@@ -1031,6 +1312,25 @@
         } finally {
           state.loading = false;
           els.refreshBtn.textContent = "刷新";
+        }
+      }
+
+      async function loadCodexResetCredits() {
+        if (state.codexResetsLoading) return;
+        state.codexResetsLoading = true;
+        renderAccounts(state.data?.accounts || []);
+        try {
+          const res = await fetch(`codex-resets.json?ts=${Date.now()}`, { cache: "no-store" });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(payload.message || `HTTP ${res.status}`);
+          state.codexResets = payload.accounts || {};
+          state.codexResetErrors = payload.errors || {};
+          state.codexResetMessage = "";
+        } catch (error) {
+          state.codexResetMessage = error.message || "查询失败";
+        } finally {
+          state.codexResetsLoading = false;
+          renderAccounts(state.data?.accounts || []);
         }
       }
 
@@ -1107,7 +1407,7 @@
             const bx = x(i) - barW / 2;
             const by = pad.top + innerH - h;
             const title = `${r.date}\n请求 ${fmtNumber(r.requests)}\n成本 ${fmtMoney(r.total_cost)}\n活跃用户 ${fmtNumber(r.active_users)}`;
-            return `<rect x="${bx.toFixed(2)}" y="${by.toFixed(2)}" width="${barW.toFixed(2)}" height="${Math.max(h, 1).toFixed(2)}" rx="3" fill="rgba(35,102,209,0.28)"><title>${esc(title)}</title></rect>`;
+            return `<rect x="${bx.toFixed(2)}" y="${by.toFixed(2)}" width="${barW.toFixed(2)}" height="${Math.max(h, 1).toFixed(2)}" rx="3" fill="var(--chart-bar)"><title>${esc(title)}</title></rect>`;
           })
           .join("");
 
@@ -1127,8 +1427,8 @@
           <text class="chart-axis" x="8" y="${pad.top + 4}">${esc(fmtNumber(maxReq))}</text>
           <text class="chart-axis" x="8" y="${pad.top + innerH + 4}">0</text>
           ${bars}
-          <polyline points="${costPoints}" fill="none" stroke="#138a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
-          <polyline points="${userPoints}" fill="none" stroke="#b76b00" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="${costPoints}" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="${userPoints}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round" stroke-linejoin="round"></polyline>
           ${labels}
         </svg>`;
       }
@@ -1181,8 +1481,47 @@
           .join("");
       }
 
+      function isCodexOAuth(account) {
+        return String(account.platform || "").toLowerCase() === "openai" && String(account.type || "").toLowerCase() === "oauth";
+      }
+
+      function renderResetCredits(account) {
+        if (!isCodexOAuth(account)) return "";
+        const key = String(account.id);
+        const reset = state.codexResets[key];
+        const accountError = state.codexResetErrors[key];
+        if (reset) {
+          const count = reset.available_count;
+          const countText = count === null || count === undefined ? "未提供" : `${fmtNumber(count)} 次`;
+          const expirations = Array.isArray(reset.expires_at) ? reset.expires_at.filter(Boolean) : [];
+          const expiry = expirations.length ? `最近到期 ${dateTime(expirations[0])}` : "未提供到期时间";
+          const refreshStatus = state.codexResetMessage ? " · 更新失败" : state.codexResetsLoading ? " · 更新中" : "";
+          const expiryTitle = expirations.length ? expirations.map((value) => `到期 ${dateTime(value)}`).join("\n") : expiry;
+          const title = state.codexResetMessage ? `${expiryTitle}\n${state.codexResetMessage}` : expiryTitle;
+          return `<div class="reset-credit${count === null || count === undefined ? " is-unknown" : ""}" title="${esc(title)}">
+            <span>Codex 可用重置</span>
+            <strong>${esc(countText)}</strong>
+            <span class="reset-expiry">${esc(expiry + refreshStatus)}</span>
+          </div>`;
+        }
+        if (accountError || state.codexResetMessage) {
+          const message = accountError || state.codexResetMessage;
+          return `<div class="reset-credit is-failed" title="${esc(message)}">
+            <span>Codex 可用重置</span>
+            <strong>获取失败</strong>
+            <span class="reset-expiry">${esc(message)}</span>
+          </div>`;
+        }
+        return `<div class="reset-credit is-loading">
+          <span>Codex 可用重置</span>
+          <strong>${state.codexResetsLoading ? "查询中" : "等待查询"}</strong>
+          <span class="reset-expiry">实时读取 Sub2API 额度接口</span>
+        </div>`;
+      }
+
       function renderAccountWindow(account) {
         const usage = account.codex_usage || {};
+        const resetCredits = renderResetCredits(account);
         const windows = [
           {
             key: "7d",
@@ -1190,14 +1529,21 @@
             data: usage.window_7d || {},
           },
         ];
-        const hasAny = windows.some((item) => item.data && (item.data.used_percent !== null || item.data.reset_at || item.data.window_minutes));
+        const hasAny = windows.some((item) => item.data && (
+          (item.data.used_percent !== null && item.data.used_percent !== undefined) || item.data.reset_at || item.data.window_minutes
+        ));
         const sessionBits = [
           account.session_window_start && account.session_window_end ? `${dateTime(account.session_window_start)} - ${dateTime(account.session_window_end)}` : "",
           account.temp_unschedulable_reason ? account.temp_unschedulable_reason : "",
         ].filter(Boolean);
         if (!hasAny) {
           const message = sessionBits.length ? sessionBits.join(" · ") : "暂无 Codex 窗口数据";
-          return `<div class="window-panel empty">${esc(message)}</div>`;
+          if (!resetCredits) return `<div class="window-panel empty">${esc(message)}</div>`;
+          return `<div class="window-panel">
+            <div class="window-header"><strong>窗口信息</strong><span>暂无窗口数据</span></div>
+            ${resetCredits}
+            ${sessionBits.length ? `<div class="chips">${sessionBits.map((chip) => `<span class="chip">${esc(chip)}</span>`).join("")}</div>` : ""}
+          </div>`;
         }
         const updatedAt = usage.updated_at ? `更新 ${dateTime(usage.updated_at)}` : "未记录更新时间";
         const primary = usage.primary || {};
@@ -1213,6 +1559,7 @@
             <strong>窗口信息</strong>
             <span>${esc(updatedAt)}</span>
           </div>
+          ${resetCredits}
           <div class="window-grid">
             ${windows.map((item) => renderWindowCard(item.title, item.data)).join("")}
           </div>
@@ -1346,6 +1693,17 @@
         if (state.sort === "balance") return num(b.balance) - num(a.balance);
         return num(bm.total_cost) - num(am.total_cost);
       }
+
+      els.themeToggle.addEventListener("click", () => {
+        const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+        applyTheme(current === "dark" ? "light" : "dark", true);
+      });
+      if (typeof systemTheme.addEventListener === "function") {
+        systemTheme.addEventListener("change", (event) => {
+          if (!savedTheme()) applyTheme(event.matches ? "dark" : "light");
+        });
+      }
+      applyTheme(document.documentElement.dataset.theme || (systemTheme.matches ? "dark" : "light"));
 
       els.refreshBtn.addEventListener("click", () => loadData(true));
       els.searchInput.addEventListener("input", (event) => {
