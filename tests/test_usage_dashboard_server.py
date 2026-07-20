@@ -1,5 +1,6 @@
 import io
 import json
+import sys
 import tempfile
 import time
 import unittest
@@ -48,6 +49,9 @@ class UsageDashboardServerTest(unittest.TestCase):
         login_html = app.login_html()
         self.assertIn('localStorage.getItem("sub2api-theme")', login_html)
         self.assertIn(':root[data-theme="dark"]', login_html)
+        self.assertIn('<option value="todayCost">按今日请求成本</option>', html)
+        self.assertIn('sort: "todayCost"', html)
+        self.assertIn('metric(b, "today").total_cost', html)
 
     def test_session_cookie_round_trip_and_tamper_rejection(self):
         secret = b"test-secret"
@@ -56,15 +60,12 @@ class UsageDashboardServerTest(unittest.TestCase):
             secret,
             now=1000,
             max_age=60,
-            api_tokens={"at": "access", "rt": "refresh", "at_exp": 1050},
         )
 
         payload = server.validate_session_cookie(cookie, secret, now=1010)
 
         self.assertEqual(payload["sub"], "user@example.com")
-        self.assertEqual(payload["at"], "access")
-        self.assertEqual(payload["rt"], "refresh")
-        self.assertEqual(payload["at_exp"], 1050)
+        self.assertEqual(set(payload), {"sub", "iat", "exp"})
         self.assertIsNone(server.validate_session_cookie(cookie + "x", secret, now=1010))
         self.assertIsNone(server.validate_session_cookie(cookie, secret, now=2000))
 
@@ -84,7 +85,7 @@ class UsageDashboardServerTest(unittest.TestCase):
             self.assertEqual(headers["Content-Type"], "text/html; charset=utf-8")
             self.assertEqual(body, b"dashboard")
 
-    def test_authenticate_with_sub2api_extracts_nested_token_pair(self):
+    def test_authenticate_with_sub2api_accepts_nested_access_token(self):
         class Response:
             def __enter__(self):
                 return self
@@ -102,13 +103,11 @@ class UsageDashboardServerTest(unittest.TestCase):
                     },
                 }).encode("utf-8")
 
-        with mock.patch.object(server.urllib.request, "urlopen", return_value=Response()), mock.patch.object(server.time, "time", return_value=1000):
-            ok, auth = server.authenticate_with_sub2api("admin@example.com", "secret")
+        with mock.patch.object(server.urllib.request, "urlopen", return_value=Response()):
+            ok, message = server.authenticate_with_sub2api("user@example.com", "secret")
 
         self.assertTrue(ok)
-        self.assertEqual(auth["at"], "access-token")
-        self.assertEqual(auth["rt"], "refresh-token")
-        self.assertEqual(auth["at_exp"], 4600)
+        self.assertEqual(message, "ok")
 
     def test_auth_redirects_to_base_path_login(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -167,7 +166,7 @@ class UsageDashboardServerTest(unittest.TestCase):
             self.assertEqual(seen, {"email": "user@example.com", "password": "secret"})
             self.assertEqual(body, b"")
 
-    def test_login_stores_sub2api_tokens_in_signed_session(self):
+    def test_login_does_not_store_sub2api_tokens_in_signed_session(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             public = root / "public"
@@ -188,8 +187,9 @@ class UsageDashboardServerTest(unittest.TestCase):
             cookie = headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[1]
             session = server.validate_session_cookie(cookie, b"secret")
             self.assertEqual(status, "302 Found")
-            self.assertEqual(session["at"], "access-token")
-            self.assertEqual(session["rt"], "refresh-token")
+            self.assertEqual(session["sub"], "user@example.com")
+            self.assertNotIn("at", session)
+            self.assertNotIn("rt", session)
 
     def test_login_resolves_username_from_injected_resolver(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -230,8 +230,8 @@ class UsageDashboardServerTest(unittest.TestCase):
             }), encoding="utf-8")
             seen = {}
 
-            def quota_fetcher(api_base, account_ids, access_token):
-                seen.update(api_base=api_base, account_ids=account_ids, access_token=access_token)
+            def quota_fetcher(api_base, account_ids, admin_credential):
+                seen.update(api_base=api_base, account_ids=account_ids, admin_credential=admin_credential)
                 return {"11": {"available_count": 2, "expires_at": ["2026-07-03T04:05:06Z"]}}, {}
 
             app = server.UsageDashboardApp(
@@ -239,9 +239,10 @@ class UsageDashboardServerTest(unittest.TestCase):
                 data_file,
                 secret=b"secret",
                 api_base="http://sub2api/api/v1",
+                admin_api_key="admin-api-key",
                 quota_fetcher=quota_fetcher,
             )
-            cookie = server.create_session_cookie("admin@example.com", b"secret", api_tokens={"at": "admin-access"})
+            cookie = server.create_session_cookie("user@example.com", b"secret")
 
             status, _, body = call_app(
                 app,
@@ -253,49 +254,48 @@ class UsageDashboardServerTest(unittest.TestCase):
             self.assertEqual(status, "200 OK")
             self.assertEqual(payload["accounts"]["11"]["available_count"], 2)
             self.assertEqual(seen["account_ids"], [11])
-            self.assertEqual(seen["access_token"], "admin-access")
+            self.assertEqual(seen["admin_credential"], ("api_key", "admin-api-key"))
 
-    def test_codex_resets_endpoint_refreshes_expiring_access_token(self):
+    def test_codex_resets_endpoint_rejects_missing_server_admin_credential(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             public = root / "public"
             public.mkdir()
             data_file = root / "data.json"
             data_file.write_text(json.dumps({"accounts": [{"id": 11, "platform": "openai", "type": "oauth"}]}), encoding="utf-8")
-            seen = {}
+            app = server.UsageDashboardApp(public, data_file, secret=b"secret")
+            cookie = server.create_session_cookie("user@example.com", b"secret")
 
-            def token_refresher(api_base, refresh_token):
-                self.assertEqual(refresh_token, "old-refresh")
-                return {"at": "new-access", "rt": "new-refresh", "at_exp": int(time.time()) + 3600}
-
-            def quota_fetcher(api_base, account_ids, access_token):
-                seen["access_token"] = access_token
-                return {}, {}
-
-            app = server.UsageDashboardApp(
-                public,
-                data_file,
-                secret=b"secret",
-                quota_fetcher=quota_fetcher,
-                token_refresher=token_refresher,
-            )
-            cookie = server.create_session_cookie(
-                "admin@example.com",
-                b"secret",
-                api_tokens={"at": "old-access", "rt": "old-refresh", "at_exp": int(time.time()) + 30},
-            )
-
-            status, headers, _ = call_app(
+            status, _, body = call_app(
                 app,
                 "/usage/codex-resets.json",
                 headers={"Cookie": f"{server.COOKIE_NAME}={cookie}"},
             )
 
-            refreshed_cookie = headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[1]
-            refreshed_session = server.validate_session_cookie(refreshed_cookie, b"secret")
-            self.assertEqual(status, "200 OK")
-            self.assertEqual(seen["access_token"], "new-access")
-            self.assertEqual(refreshed_session["rt"], "new-refresh")
+            self.assertEqual(status, "503 Service Unavailable")
+            self.assertIn("管理 API Key", json.loads(body)["message"])
+
+    def test_request_sub2api_json_sends_admin_api_key(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return b'{"code":0,"data":{"ok":true}}'
+
+        def urlopen(request, timeout):
+            self.assertEqual(request.get_header("X-api-key"), "admin-key")
+            self.assertIsNone(request.get_header("Authorization"))
+            self.assertEqual(timeout, 25)
+            return Response()
+
+        with mock.patch.object(server.urllib.request, "urlopen", side_effect=urlopen):
+            result = server.request_sub2api_json("http://sub2api/api/v1/admin/test", admin_api_key="admin-key")
+
+        self.assertEqual(result, {"ok": True})
 
     def test_query_codex_reset_credit_extracts_count_and_expirations(self):
         quota_payload = {
@@ -309,14 +309,35 @@ class UsageDashboardServerTest(unittest.TestCase):
             },
         }
         with mock.patch.object(server, "request_sub2api_json", return_value=quota_payload) as request:
-            result = server.query_codex_reset_credit("http://sub2api/api/v1", 11, "access")
+            result = server.query_codex_reset_credit("http://sub2api/api/v1", 11, ("api_key", "admin-key"))
 
         self.assertEqual(result["available_count"], 2)
         self.assertEqual(result["expires_at"][0], "2026-07-03T04:05:06Z")
         request.assert_called_once_with(
             "http://sub2api/api/v1/admin/openai/accounts/11/quota",
-            access_token="access",
+            access_token=None,
+            admin_api_key="admin-key",
         )
+
+    def test_load_admin_api_key_reads_setting_in_read_only_transaction(self):
+        cursor = mock.MagicMock()
+        cursor.__enter__.return_value = cursor
+        cursor.fetchone.return_value = (" admin-key ",)
+        connection = mock.MagicMock()
+        connection.__enter__.return_value = connection
+        connection.cursor.return_value = cursor
+        psycopg = mock.MagicMock()
+        psycopg.connect.return_value = connection
+
+        with mock.patch.dict(sys.modules, {"psycopg": psycopg}):
+            result = server.load_admin_api_key("postgres://example")
+
+        self.assertEqual(result, "admin-key")
+        psycopg.connect.assert_called_once_with("postgres://example")
+        cursor.execute.assert_has_calls([
+            mock.call("SET TRANSACTION READ ONLY"),
+            mock.call("SELECT value FROM settings WHERE key = %s LIMIT 1", ("admin_api_key",)),
+        ])
 
     def test_refresher_writes_valid_json_from_query_runner(self):
         with tempfile.TemporaryDirectory() as tmp:

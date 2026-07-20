@@ -1050,6 +1050,7 @@
               </label>
               <label class="field">
                 <select id="sortSelect">
+                  <option value="todayCost">按今日请求成本</option>
                   <option value="cost30">按 30 天成本</option>
                   <option value="requests30">按 30 天请求</option>
                   <option value="today">按今日请求</option>
@@ -1118,7 +1119,7 @@
         loading: false,
         search: "",
         status: "all",
-        sort: "cost30",
+        sort: "todayCost",
         timer: null,
         codexResets: {},
         codexResetErrors: {},
@@ -1685,6 +1686,7 @@
       function sortUsers(a, b) {
         const am = metric(a, "last_30d");
         const bm = metric(b, "last_30d");
+        if (state.sort === "todayCost") return num(metric(b, "today").total_cost) - num(metric(a, "today").total_cost);
         if (state.sort === "requests30") return num(bm.requests) - num(am.requests);
         if (state.sort === "today") return num(metric(b, "today").requests) - num(metric(a, "today").requests);
         if (state.sort === "active") {

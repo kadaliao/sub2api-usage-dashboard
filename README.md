@@ -4,7 +4,7 @@ Reusable sidecar dashboard for existing [Sub2API](https://github.com/weishaw/sub
 
 It does not modify the Sub2API image, binary, database schema, or business tables. The sidecar connects to the existing Postgres database in read-only transactions, periodically generates usage data, and serves a dashboard under `/usage/` or a custom path.
 
-For OpenAI OAuth accounts, the dashboard also shows the live Codex rate-limit reset credit count. This value is not stored in Postgres, so the sidecar queries the authenticated Sub2API `/admin/openai/accounts/:id/quota` endpoint and isolates per-account failures.
+For OpenAI OAuth accounts, the dashboard also shows the live Codex rate-limit reset credit count. This value is not stored in Postgres, so the sidecar queries the Sub2API `/admin/openai/accounts/:id/quota` endpoint with a server-side Admin API Key and isolates per-account failures. The key is loaded from Sub2API's `settings` table in a read-only transaction, allowing every authenticated dashboard user to see the count without receiving admin access.
 
 The dashboard includes a persistent light/dark theme switch. The first visit follows the operating system preference; an explicit choice is stored in the browser.
 
@@ -125,7 +125,9 @@ Default:
 AUTH_MODE=sub2api
 ```
 
-Users log in with their existing Sub2API account. The sidecar forwards credentials to the Sub2API login API and never stores the password. The returned access and refresh tokens are kept in the signed, `HttpOnly` 30-day session cookie so the sidecar can query live Codex reset counts; access tokens are refreshed before expiry.
+Users log in with their existing Sub2API account. The sidecar forwards credentials to the Sub2API login API and never stores the password or returned access and refresh tokens. Its signed, `HttpOnly` 30-day session cookie contains only the login identity and timestamps. Live Codex reset counts use the server-side Admin API Key instead of the user's token.
+
+The sidecar automatically reads Sub2API's `admin_api_key` setting through its existing read-only database connection. Create that key in Sub2API's admin settings if it is not already configured. `SUB2API_ADMIN_API_KEY` or `SUB2API_ADMIN_API_KEY_FILE` can explicitly override the database value; the file option is preferred for non-container deployments.
 
 Disable authentication:
 
@@ -133,7 +135,7 @@ Disable authentication:
 ./install.sh --auth none
 ```
 
-Use `--auth none` only when the route is protected by another layer or intentionally public. The dashboard displays user emails, account names, status, and usage metrics. To load Codex reset counts in this mode, set `SUB2API_ADMIN_TOKEN` to a valid Sub2API admin access token.
+Use `--auth none` only when the route is protected by another layer or intentionally public. The dashboard displays user emails, account names, status, and usage metrics. Codex reset counts still use the server-side Admin API Key in this mode.
 
 ## Manual Docker Compose
 
@@ -150,8 +152,8 @@ services:
       BASE_PATH: "/usage"
       AUTH_MODE: "sub2api"
       SUB2API_API_BASE: "http://sub2api:8080/api/v1"
-      # Optional for AUTH_MODE=none; prefer login-based tokens otherwise.
-      # SUB2API_ADMIN_TOKEN: "replace-with-admin-access-token"
+      # Optional override; otherwise the sidecar reads settings.admin_api_key.
+      # SUB2API_ADMIN_API_KEY: "admin-replace-with-admin-api-key"
       SESSION_SECRET: "replace-with-random-secret"
       COOKIE_SECURE: "true"
       REFRESH_INTERVAL_SECONDS: "60"
@@ -173,7 +175,9 @@ DATABASE_URL                 Required Postgres connection string.
 BASE_PATH                    Dashboard mount path, default /usage.
 AUTH_MODE                    sub2api or none, default sub2api.
 SUB2API_API_BASE             Login and admin API base, default http://sub2api:8080/api/v1.
-SUB2API_ADMIN_TOKEN          Optional admin access token for Codex counts, mainly for AUTH_MODE=none.
+SUB2API_ADMIN_API_KEY        Optional Admin API Key override for Codex counts; defaults to settings.admin_api_key.
+SUB2API_ADMIN_API_KEY_FILE   Optional path containing the Admin API Key; used when the direct override is empty.
+SUB2API_ADMIN_TOKEN          Deprecated fallback admin access token for Codex counts.
 SESSION_SECRET               Cookie signing secret.
 SESSION_SECRET_FILE          Secret file fallback, default /app/data/session_secret.
 COOKIE_SECURE                true for HTTPS proxy, false for plain HTTP port mode.

@@ -49,11 +49,9 @@ def html_escape(value):
     )
 
 
-def create_session_cookie(subject, secret, now=None, max_age=SESSION_MAX_AGE, api_tokens=None):
+def create_session_cookie(subject, secret, now=None, max_age=SESSION_MAX_AGE):
     now = int(now if now is not None else time.time())
     payload = {"sub": subject, "iat": now, "exp": now + max_age}
-    if api_tokens:
-        payload.update({key: api_tokens[key] for key in ("at", "rt", "at_exp") if api_tokens.get(key) not in (None, "")})
     payload_part = b64_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     sig = hmac.new(secret, payload_part.encode("ascii"), hashlib.sha256).digest()
     return f"{payload_part}.{b64_encode(sig)}"
@@ -126,20 +124,9 @@ def authenticate_with_sub2api(email, password, api_base=DEFAULT_API_BASE):
     auth = payload.get("data") if isinstance(payload.get("data"), dict) else payload
     if auth.get("requires_2fa"):
         return False, "此面板暂不支持两步验证登录，请使用专用管理令牌"
-    access_token = auth.get("access_token")
-    if not access_token:
+    if not auth.get("access_token"):
         return False, payload.get("message") or "登录响应未包含访问令牌"
-    expires_in = auth.get("expires_in")
-    try:
-        access_expires_at = int(time.time()) + int(expires_in) if expires_in else None
-    except (TypeError, ValueError):
-        access_expires_at = None
-    return True, {
-        "message": "ok",
-        "at": access_token,
-        "rt": auth.get("refresh_token"),
-        "at_exp": access_expires_at,
-    }
+    return True, "ok"
 
 
 class Sub2APIRequestError(RuntimeError):
@@ -148,13 +135,15 @@ class Sub2APIRequestError(RuntimeError):
         self.status = status
 
 
-def request_sub2api_json(endpoint, access_token=None, body=None, timeout=25):
+def request_sub2api_json(endpoint, access_token=None, admin_api_key=None, body=None, timeout=25):
     encoded_body = None if body is None else json.dumps(body).encode("utf-8")
     headers = {"Accept": "application/json"}
     if encoded_body is not None:
         headers["Content-Type"] = "application/json"
     if access_token:
         headers["Authorization"] = f"Bearer {access_token}"
+    if admin_api_key:
+        headers["x-api-key"] = admin_api_key
     request = urllib.request.Request(
         endpoint,
         data=encoded_body,
@@ -181,30 +170,12 @@ def request_sub2api_json(endpoint, access_token=None, body=None, timeout=25):
     return payload.get("data") if "data" in payload else payload
 
 
-def refresh_sub2api_tokens(api_base, refresh_token):
-    data = request_sub2api_json(
-        f"{api_base.rstrip('/')}/auth/refresh",
-        body={"refresh_token": refresh_token},
-        timeout=12,
-    )
-    if not isinstance(data, dict) or not data.get("access_token"):
-        raise Sub2APIRequestError("刷新登录令牌失败")
-    expires_in = data.get("expires_in")
-    try:
-        access_expires_at = int(time.time()) + int(expires_in) if expires_in else None
-    except (TypeError, ValueError):
-        access_expires_at = None
-    return {
-        "at": data["access_token"],
-        "rt": data.get("refresh_token") or refresh_token,
-        "at_exp": access_expires_at,
-    }
-
-
-def query_codex_reset_credit(api_base, account_id, access_token):
+def query_codex_reset_credit(api_base, account_id, admin_credential):
+    credential_type, credential_value = admin_credential
     data = request_sub2api_json(
         f"{api_base.rstrip('/')}/admin/openai/accounts/{int(account_id)}/quota",
-        access_token=access_token,
+        access_token=credential_value if credential_type == "access_token" else None,
+        admin_api_key=credential_value if credential_type == "api_key" else None,
     )
     if not isinstance(data, dict):
         raise Sub2APIRequestError("额度接口返回了无效数据")
@@ -225,7 +196,7 @@ def query_codex_reset_credit(api_base, account_id, access_token):
     }
 
 
-def fetch_codex_reset_credits(api_base, account_ids, access_token, max_workers=6):
+def fetch_codex_reset_credits(api_base, account_ids, admin_credential, max_workers=6):
     results = {}
     errors = {}
     if not account_ids:
@@ -233,7 +204,7 @@ def fetch_codex_reset_credits(api_base, account_ids, access_token, max_workers=6
     workers = max(1, min(max_workers, len(account_ids)))
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="codex-reset") as executor:
         futures = {
-            executor.submit(query_codex_reset_credit, api_base, account_id, access_token): account_id
+            executor.submit(query_codex_reset_credit, api_base, account_id, admin_credential): account_id
             for account_id in account_ids
         }
         for future in as_completed(futures):
@@ -259,6 +230,22 @@ def default_query_runner(database_url, sql):
     if not row:
         raise RuntimeError("usage query returned no rows")
     return row[0]
+
+
+def load_admin_api_key(database_url):
+    if not database_url:
+        return ""
+    try:
+        import psycopg
+    except ImportError as exc:
+        raise RuntimeError("psycopg is required for admin API key lookup") from exc
+
+    with psycopg.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SET TRANSACTION READ ONLY")
+            cur.execute("SELECT value FROM settings WHERE key = %s LIMIT 1", ("admin_api_key",))
+            row = cur.fetchone()
+    return str(row[0]).strip() if row and row[0] else ""
 
 
 class UsageDataRefresher:
@@ -330,9 +317,9 @@ class UsageDashboardApp:
         username_resolver=None,
         refresh_state=None,
         api_base=DEFAULT_API_BASE,
+        admin_api_key="",
         admin_token="",
         quota_fetcher=None,
-        token_refresher=None,
     ):
         self.public_dir = Path(public_dir).resolve()
         self.data_file = Path(data_file).resolve()
@@ -344,9 +331,9 @@ class UsageDashboardApp:
         self.username_resolver = username_resolver or (lambda username: None)
         self.refresh_state = refresh_state or RefreshState()
         self.api_base = api_base
+        self.admin_api_key = admin_api_key
         self.admin_token = admin_token
         self.quota_fetcher = quota_fetcher or fetch_codex_reset_credits
-        self.token_refresher = token_refresher or refresh_sub2api_tokens
 
     def __call__(self, environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
@@ -384,6 +371,7 @@ class UsageDashboardApp:
             "status": "ok" if not state["last_error"] else "degraded",
             "base_path": self.base_path or "/",
             "auth_mode": self.auth_mode,
+            "codex_resets_configured": bool(self.admin_api_key or self.admin_token),
             "last_refresh_ok_at": state["last_ok_at"],
             "last_refresh_error": state["last_error"],
         }
@@ -426,8 +414,7 @@ class UsageDashboardApp:
             message = auth_result.get("message") if isinstance(auth_result, dict) else auth_result
             return self.respond_html(start_response, self.login_html(message or "账号或密码不正确", email), "401 Unauthorized")
 
-        api_tokens = auth_result if isinstance(auth_result, dict) else None
-        session_cookie = create_session_cookie(login_identifier, self.secret, api_tokens=api_tokens)
+        session_cookie = create_session_cookie(login_identifier, self.secret)
         headers = [
             ("Location", self.url_for("")),
             ("Set-Cookie", self.session_cookie_header(session_cookie)),
@@ -455,7 +442,7 @@ class UsageDashboardApp:
                 return str(user["email"])
         return value
 
-    def handle_codex_resets(self, session, start_response):
+    def handle_codex_resets(self, _session, start_response):
         try:
             dashboard = json.loads(self.data_file.read_text(encoding="utf-8"))
             accounts = dashboard.get("accounts", []) if isinstance(dashboard, dict) else []
@@ -479,38 +466,24 @@ class UsageDashboardApp:
                 {"generated_at": int(time.time()), "accounts": {}, "errors": {}},
             )
 
-        access_token = self.admin_token or (session or {}).get("at")
-        extra_headers = []
-        if not self.admin_token and access_token and (session or {}).get("rt"):
-            try:
-                expires_at = int(session.get("at_exp") or 0)
-            except (TypeError, ValueError):
-                expires_at = 0
-            if expires_at and expires_at <= int(time.time()) + 120:
-                try:
-                    tokens = self.token_refresher(self.api_base, session["rt"])
-                except Exception as exc:
-                    return self.respond_json(
-                        start_response,
-                        {"message": f"登录令牌刷新失败: {str(exc)[:160]}"},
-                        "401 Unauthorized",
-                    )
-                access_token = tokens["at"]
-                session_cookie = create_session_cookie(session.get("sub", ""), self.secret, api_tokens=tokens)
-                extra_headers.append(("Set-Cookie", self.session_cookie_header(session_cookie)))
-
-        if not access_token:
-            message = "请退出后重新登录，以加载 Codex 重置次数" if self.auth_mode != "none" else "未配置 SUB2API_ADMIN_TOKEN"
-            return self.respond_json(start_response, {"message": message}, "503 Service Unavailable")
+        if self.admin_api_key:
+            admin_credential = ("api_key", self.admin_api_key)
+        elif self.admin_token:
+            admin_credential = ("access_token", self.admin_token)
+        else:
+            return self.respond_json(
+                start_response,
+                {"message": "未找到 Sub2API 管理 API Key，无法查询 Codex 重置次数"},
+                "503 Service Unavailable",
+            )
 
         try:
-            results, errors = self.quota_fetcher(self.api_base, account_ids, access_token)
+            results, errors = self.quota_fetcher(self.api_base, account_ids, admin_credential)
         except Exception as exc:
             return self.respond_json(
                 start_response,
                 {"message": f"Codex 重置次数查询失败: {str(exc)[:160]}"},
                 "502 Bad Gateway",
-                extra_headers=extra_headers,
             )
         return self.respond_json(
             start_response,
@@ -519,7 +492,6 @@ class UsageDashboardApp:
                 "accounts": results,
                 "errors": errors,
             },
-            extra_headers=extra_headers,
         )
 
     def logout(self, start_response):
@@ -728,7 +700,19 @@ def main():
     query_file = Path(os.environ.get("QUERY_FILE", "/app/query.sql"))
     database_url = os.environ.get("DATABASE_URL", "")
     api_base = os.environ.get("SUB2API_API_BASE", DEFAULT_API_BASE)
+    admin_api_key = os.environ.get("SUB2API_ADMIN_API_KEY", "").strip()
+    admin_api_key_file = os.environ.get("SUB2API_ADMIN_API_KEY_FILE", "").strip()
+    if not admin_api_key and admin_api_key_file:
+        try:
+            admin_api_key = Path(admin_api_key_file).read_text(encoding="utf-8").strip()
+        except Exception as exc:
+            print(f"admin API key file lookup failed: {exc}", file=sys.stderr, flush=True)
     admin_token = os.environ.get("SUB2API_ADMIN_TOKEN", "").strip()
+    if not admin_api_key and not admin_token:
+        try:
+            admin_api_key = load_admin_api_key(database_url)
+        except Exception as exc:
+            print(f"admin API key lookup failed: {exc}", file=sys.stderr, flush=True)
     host = os.environ.get("LISTEN_HOST", "0.0.0.0")
     port = int(os.environ.get("LISTEN_PORT", "8091"))
     interval = int(os.environ.get("REFRESH_INTERVAL_SECONDS", "60"))
@@ -766,6 +750,7 @@ def main():
         username_resolver=username_resolver,
         refresh_state=state,
         api_base=api_base,
+        admin_api_key=admin_api_key,
         admin_token=admin_token,
     )
     print(f"serving Sub2API usage dashboard on http://{host}:{port}{base_path or '/'}", flush=True)
